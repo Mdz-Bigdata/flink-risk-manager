@@ -1,0 +1,33 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+pom.xml.tag
+pom.xml.releaseBackup
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Flink
+.flink
+check
+
+# Logs
+*.log
+logs/
+
+# Build
+build/
+dist/
+
+# Project-specific
+conf/
+data/
