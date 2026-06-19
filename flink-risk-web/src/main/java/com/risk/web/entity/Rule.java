@@ -14,6 +14,7 @@ public class Rule {
     private String expression;
     private String riskLevel;
     private String action;
+    private Integer weight;
     private Boolean enabled;
     private String description;
     private Date createTime;
@@ -41,6 +42,8 @@ public class Rule {
     public void setRiskLevel(String riskLevel) { this.riskLevel = riskLevel; }
     public String getAction() { return action; }
     public void setAction(String action) { this.action = action; }
+    public Integer getWeight() { return weight; }
+    public void setWeight(Integer weight) { this.weight = weight; }
     public Boolean getEnabled() { return enabled; }
     public void setEnabled(Boolean enabled) { this.enabled = enabled; }
     public String getDescription() { return description; }

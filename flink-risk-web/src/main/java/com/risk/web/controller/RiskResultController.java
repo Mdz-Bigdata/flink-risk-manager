@@ -22,12 +22,12 @@ public class RiskResultController {
      */
     @GetMapping
     public Map<String, Object> getRiskResults(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) String userId,
-            @RequestParam(required = false) String eventType,
-            @RequestParam(required = false) String riskLevel,
-            @RequestParam(required = false) String action) {
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(name = "userId", required = false) String userId,
+            @RequestParam(name = "eventType", required = false) String eventType,
+            @RequestParam(name = "riskLevel", required = false) String riskLevel,
+            @RequestParam(name = "action", required = false) String action) {
 
         LambdaQueryWrapper<RiskResult> wrapper = new LambdaQueryWrapper<>();
         if (userId != null && !userId.isEmpty()) {

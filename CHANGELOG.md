@@ -1,3 +1,30 @@
+# Flink 规则引擎风控系统 v2.3 - 改动总结
+
+## CEP 不触发问题修复（v2.3）
+
+### 根本原因
+`WatermarkStrategy.noWatermarks()` 导致 CEP `within()` 时间窗口永远不推进，Pattern 匹配结果永远不会输出。
+
+### 修复内容
+
+| 文件 | 改动 |
+|------|------|
+| `RiskControlApplication.java` | `noWatermarks()` → `forBoundedOutOfOrderness(5s)` + `withTimestampAssigner()` |
+| `PatternFactory.java` | 所有 `.next()` → `.followedBy()`（宽松连续，更符合实际场景） |
+| `PatternFactory.java` | 时间窗口 5s → 30~60s（更合理） |
+| `PatternFactory.java` | Order Pattern 补充 `where()` 条件 |
+| `LoginCepJob.java` | lambda 强转 → 匿名内部类；修复 `pattern.get()` 只取部分事件的问题 |
+| `OrderCepJob.java` | 同上 |
+| `ActivityCepJob.java` | 同上 |
+
+### 编译验证
+```
+✅ flink-risk-common  COMPILE SUCCESS
+✅ flink-risk-job     COMPILE SUCCESS
+```
+
+---
+
 # Flink 规则引擎风控系统 v2.2 - 改动总结
 
 ## Redis 升级（v2.2）

@@ -5,6 +5,7 @@ import org.apache.flink.cep.CEP;
 import org.apache.flink.cep.PatternSelectFunction;
 import org.apache.flink.cep.pattern.Pattern;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,54 +19,70 @@ import java.util.*;
 public class LoginCepJob {
     private static final Logger logger = LoggerFactory.getLogger(LoginCepJob.class);
 
-    public static DataStream<PatternMatchResult> process(DataStream<LoginEvent> input) {
+    public static DataStream<PatternMatchResult> process(KeyedStream<LoginEvent, String> input) {
 
         // 模式1: 登录失败多次
         Pattern<LoginEvent, ?> failurePattern = PatternFactory.createLoginFailurePattern();
         DataStream<PatternMatchResult> failureRisks = CEP.pattern(input, failurePattern)
-                .select((PatternSelectFunction<LoginEvent, PatternMatchResult>) pattern -> {
-                    LoginEvent firstEvent = pattern.get("first").get(0);
-                    List<LoginEvent> allEvents = pattern.get("third");
+                .select(new PatternSelectFunction<LoginEvent, PatternMatchResult>() {
+                    @Override
+                    public PatternMatchResult select(Map<String, List<LoginEvent>> pattern) {
+                        // 收集所有匹配的事件
+                        List<LoginEvent> allEvents = new ArrayList<>();
+                        allEvents.addAll(pattern.getOrDefault("first", Collections.emptyList()));
+                        allEvents.addAll(pattern.getOrDefault("second", Collections.emptyList()));
+                        allEvents.addAll(pattern.getOrDefault("third", Collections.emptyList()));
 
-                    PatternMatchResult result = new PatternMatchResult(
-                            firstEvent.getUserId(), "LOGIN", "LOGIN_FAILURE");
-                    result.setEventId(UUID.randomUUID().toString());
-                    result.setContext(buildLoginContext(allEvents, "LOGIN_FAILURE"));
-                    result.setDetails(buildFailureDetails(allEvents));
+                        LoginEvent firstEvent = allEvents.get(0);
 
-                    logger.info("Login failure pattern detected: user={}, failCount={}",
-                            firstEvent.getUserId(), allEvents.size());
-                    return result;
+                        PatternMatchResult result = new PatternMatchResult(
+                                firstEvent.getUserId(), "LOGIN", "LOGIN_FAILURE");
+                        result.setEventId(UUID.randomUUID().toString());
+                        result.setContext(buildLoginContext(allEvents, "LOGIN_FAILURE"));
+                        result.setDetails(buildFailureDetails(allEvents));
+
+                        logger.info("[CEP-MATCH] Login failure pattern detected: user={}, failCount={}, events={}",
+                                firstEvent.getUserId(), allEvents.size(), allEvents.size());
+                        return result;
+                    }
                 });
 
         // 模式2: 异地登录
         Pattern<LoginEvent, ?> locationPattern = PatternFactory.createLoginLocationChangePattern();
         DataStream<PatternMatchResult> locationRisks = CEP.pattern(input, locationPattern)
-                .select((PatternSelectFunction<LoginEvent, PatternMatchResult>) pattern -> {
-                    List<LoginEvent> firstList = pattern.get("first");
-                    List<LoginEvent> secondList = pattern.get("second");
-                    LoginEvent prevEvent = firstList.get(firstList.size() - 1);
-                    LoginEvent currEvent = secondList.get(0);
+                .select(new PatternSelectFunction<LoginEvent, PatternMatchResult>() {
+                    @Override
+                    public PatternMatchResult select(Map<String, List<LoginEvent>> pattern) {
+                        List<LoginEvent> firstList = pattern.getOrDefault("first", Collections.emptyList());
+                        List<LoginEvent> secondList = pattern.getOrDefault("second", Collections.emptyList());
 
-                    PatternMatchResult result = new PatternMatchResult(
-                            currEvent.getUserId(), "LOGIN", "LOCATION_CHANGE");
-                    result.setEventId(UUID.randomUUID().toString());
+                        if (firstList.isEmpty() || secondList.isEmpty()) {
+                            return null;
+                        }
 
-                    Map<String, Object> context = buildLoginContext(secondList, "LOCATION_CHANGE");
-                    context.put("prevIp", prevEvent.getIp());
-                    context.put("currIp", currEvent.getIp());
-                    result.setContext(context);
+                        LoginEvent prevEvent = firstList.get(firstList.size() - 1);
+                        LoginEvent currEvent = secondList.get(0);
 
-                    Map<String, Object> details = new HashMap<>();
-                    details.put("prevIp", prevEvent.getIp());
-                    details.put("currIp", currEvent.getIp());
-                    details.put("prevLocation", prevEvent.getLocation());
-                    details.put("currLocation", currEvent.getLocation());
-                    result.setDetails(details);
+                        PatternMatchResult result = new PatternMatchResult(
+                                currEvent.getUserId(), "LOGIN", "LOCATION_CHANGE");
+                        result.setEventId(UUID.randomUUID().toString());
 
-                    logger.info("Location change detected: user={}, prev={}, curr={}",
-                            currEvent.getUserId(), prevEvent.getIp(), currEvent.getIp());
-                    return result;
+                        Map<String, Object> context = buildLoginContext(secondList, "LOCATION_CHANGE");
+                        context.put("prevIp", prevEvent.getIp());
+                        context.put("currIp", currEvent.getIp());
+                        result.setContext(context);
+
+                        Map<String, Object> details = new HashMap<>();
+                        details.put("prevIp", prevEvent.getIp());
+                        details.put("currIp", currEvent.getIp());
+                        details.put("prevLocation", prevEvent.getLocation());
+                        details.put("currLocation", currEvent.getLocation());
+                        result.setDetails(details);
+
+                        logger.info("[CEP-MATCH] Location change detected: user={}, prev={}, curr={}",
+                                currEvent.getUserId(), prevEvent.getIp(), currEvent.getIp());
+                        return result;
+                    }
                 });
 
         return failureRisks.union(locationRisks);

@@ -5,6 +5,7 @@ import org.apache.flink.cep.CEP;
 import org.apache.flink.cep.PatternSelectFunction;
 import org.apache.flink.cep.pattern.Pattern;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,57 +19,81 @@ import java.util.*;
 public class ActivityCepJob {
     private static final Logger logger = LoggerFactory.getLogger(ActivityCepJob.class);
 
-    public static DataStream<PatternMatchResult> process(DataStream<ActivityEvent> input) {
+    public static DataStream<PatternMatchResult> process(KeyedStream<ActivityEvent, String> input) {
 
         // 模式1: 频繁参与活动
         Pattern<ActivityEvent, ?> frequentPattern = PatternFactory.createActivityFrequentPattern();
         DataStream<PatternMatchResult> frequentRisks = CEP.pattern(input, frequentPattern)
-                .select((PatternSelectFunction<ActivityEvent, PatternMatchResult>) pattern -> {
-                    ActivityEvent firstEvent = pattern.get("first").get(0);
-                    List<ActivityEvent> allEvents = pattern.get("fourth");
+                .select(new PatternSelectFunction<ActivityEvent, PatternMatchResult>() {
+                    @Override
+                    public PatternMatchResult select(Map<String, List<ActivityEvent>> pattern) {
+                        // 收集所有匹配的事件
+                        List<ActivityEvent> allEvents = new ArrayList<>();
+                        allEvents.addAll(pattern.getOrDefault("first", Collections.emptyList()));
+                        allEvents.addAll(pattern.getOrDefault("second", Collections.emptyList()));
+                        allEvents.addAll(pattern.getOrDefault("third", Collections.emptyList()));
+                        allEvents.addAll(pattern.getOrDefault("fourth", Collections.emptyList()));
 
-                    Map<String, Object> context = buildActivityContext(allEvents, "ACTIVITY_FREQUENT");
+                        if (allEvents.isEmpty()) {
+                            return null;
+                        }
 
-                    Map<String, Object> details = new HashMap<>();
-                    details.put("participationCount", allEvents.size());
-                    details.put("reason", "Abnormal participation pattern detected");
+                        ActivityEvent firstEvent = allEvents.get(0);
 
-                    PatternMatchResult result = new PatternMatchResult(
-                            firstEvent.getUserId(), "ACTIVITY", "ACTIVITY_FREQUENT");
-                    result.setEventId(UUID.randomUUID().toString());
-                    result.setContext(context);
-                    result.setDetails(details);
+                        Map<String, Object> context = buildActivityContext(allEvents, "ACTIVITY_FREQUENT");
 
-                    logger.info("Abnormal activity detected: user={}, count={}",
-                            firstEvent.getUserId(), allEvents.size());
-                    return result;
+                        Map<String, Object> details = new HashMap<>();
+                        details.put("participationCount", allEvents.size());
+                        details.put("reason", "Abnormal participation pattern detected");
+
+                        PatternMatchResult result = new PatternMatchResult(
+                                firstEvent.getUserId(), "ACTIVITY", "ACTIVITY_FREQUENT");
+                        result.setEventId(UUID.randomUUID().toString());
+                        result.setContext(context);
+                        result.setDetails(details);
+
+                        logger.info("[CEP-MATCH] Abnormal activity detected: user={}, count={}",
+                                firstEvent.getUserId(), allEvents.size());
+                        return result;
+                    }
                 });
 
         // 模式2: 重复领取优惠券
         Pattern<ActivityEvent, ?> couponPattern = PatternFactory.createCouponRepeatPattern();
         DataStream<PatternMatchResult> couponRisks = CEP.pattern(input, couponPattern)
-                .select((PatternSelectFunction<ActivityEvent, PatternMatchResult>) pattern -> {
-                    ActivityEvent firstEvent = pattern.get("first").get(0);
-                    List<ActivityEvent> allEvents = pattern.get("third");
+                .select(new PatternSelectFunction<ActivityEvent, PatternMatchResult>() {
+                    @Override
+                    public PatternMatchResult select(Map<String, List<ActivityEvent>> pattern) {
+                        List<ActivityEvent> allEvents = new ArrayList<>();
+                        allEvents.addAll(pattern.getOrDefault("first", Collections.emptyList()));
+                        allEvents.addAll(pattern.getOrDefault("second", Collections.emptyList()));
+                        allEvents.addAll(pattern.getOrDefault("third", Collections.emptyList()));
 
-                    Map<String, Object> context = buildActivityContext(allEvents, "COUPON_REPEAT");
+                        if (allEvents.isEmpty()) {
+                            return null;
+                        }
 
-                    Map<String, Object> details = new HashMap<>();
-                    details.put("reason", "Repeated coupon claim detected");
-                    details.put("couponClaimCount", allEvents.size());
-                    if (!allEvents.isEmpty()) {
-                        details.put("couponCode", allEvents.get(0).getCouponCode());
+                        ActivityEvent firstEvent = allEvents.get(0);
+
+                        Map<String, Object> context = buildActivityContext(allEvents, "COUPON_REPEAT");
+
+                        Map<String, Object> details = new HashMap<>();
+                        details.put("reason", "Repeated coupon claim detected");
+                        details.put("couponClaimCount", allEvents.size());
+                        if (!allEvents.isEmpty()) {
+                            details.put("couponCode", allEvents.get(0).getCouponCode());
+                        }
+
+                        PatternMatchResult result = new PatternMatchResult(
+                                firstEvent.getUserId(), "ACTIVITY", "COUPON_REPEAT");
+                        result.setEventId(UUID.randomUUID().toString());
+                        result.setContext(context);
+                        result.setDetails(details);
+
+                        logger.info("[CEP-MATCH] Repeated coupon claim detected: user={}",
+                                firstEvent.getUserId());
+                        return result;
                     }
-
-                    PatternMatchResult result = new PatternMatchResult(
-                            firstEvent.getUserId(), "ACTIVITY", "COUPON_REPEAT");
-                    result.setEventId(UUID.randomUUID().toString());
-                    result.setContext(context);
-                    result.setDetails(details);
-
-                    logger.info("Repeated coupon claim detected: user={}",
-                            firstEvent.getUserId());
-                    return result;
                 });
 
         return frequentRisks.union(couponRisks);

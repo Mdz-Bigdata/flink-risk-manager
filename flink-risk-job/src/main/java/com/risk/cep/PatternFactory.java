@@ -6,8 +6,10 @@ import com.risk.event.OrderEvent;
 import org.apache.flink.cep.pattern.Pattern;
 import org.apache.flink.cep.pattern.conditions.SimpleCondition;
 
+import java.time.Duration;
+
 /**
- * CEP 模式工厂（Flink 2.x - 匿名内部类版）
+ * CEP 模式工厂（Flink 2.x - 带时间窗口）
  */
 public class PatternFactory {
 
@@ -32,7 +34,8 @@ public class PatternFactory {
                     public boolean filter(LoginEvent event) {
                         return !event.isSuccess();
                     }
-                });
+                })
+                .within(Duration.ofSeconds(60));
     }
 
     public static Pattern<LoginEvent, ?> createLoginLocationChangePattern() {
@@ -49,18 +52,51 @@ public class PatternFactory {
                     public boolean filter(LoginEvent event) {
                         return event.isSuccess();
                     }
-                });
+                })
+                .within(Duration.ofSeconds(60));
     }
 
     public static Pattern<OrderEvent, ?> createOrderFrequentPattern() {
         return Pattern.<OrderEvent>begin("first")
+                .where(new SimpleCondition<OrderEvent>() {
+                    @Override
+                    public boolean filter(OrderEvent event) {
+                        return event.getAmount() != null && event.getAmount().compareTo(java.math.BigDecimal.ZERO) > 0;
+                    }
+                })
                 .followedBy("second")
-                .followedBy("third");
+                .where(new SimpleCondition<OrderEvent>() {
+                    @Override
+                    public boolean filter(OrderEvent event) {
+                        return event.getAmount() != null && event.getAmount().compareTo(java.math.BigDecimal.ZERO) > 0;
+                    }
+                })
+                .followedBy("third")
+                .where(new SimpleCondition<OrderEvent>() {
+                    @Override
+                    public boolean filter(OrderEvent event) {
+                        return event.getAmount() != null && event.getAmount().compareTo(java.math.BigDecimal.ZERO) > 0;
+                    }
+                })
+                .within(Duration.ofSeconds(60));
     }
 
     public static Pattern<OrderEvent, ?> createOrderRapidPattern() {
         return Pattern.<OrderEvent>begin("first")
-                .followedBy("second");
+                .where(new SimpleCondition<OrderEvent>() {
+                    @Override
+                    public boolean filter(OrderEvent event) {
+                        return event.getAmount() != null && event.getAmount().compareTo(new java.math.BigDecimal("100")) > 0;
+                    }
+                })
+                .followedBy("second")
+                .where(new SimpleCondition<OrderEvent>() {
+                    @Override
+                    public boolean filter(OrderEvent event) {
+                        return event.getAmount() != null && event.getAmount().compareTo(new java.math.BigDecimal("100")) > 0;
+                    }
+                })
+                .within(Duration.ofSeconds(30));
     }
 
     public static Pattern<ActivityEvent, ?> createActivityFrequentPattern() {
@@ -91,7 +127,8 @@ public class PatternFactory {
                     public boolean filter(ActivityEvent event) {
                         return "PARTICIPATE".equals(event.getActionType());
                     }
-                });
+                })
+                .within(Duration.ofSeconds(60));
     }
 
     public static Pattern<ActivityEvent, ?> createCouponRepeatPattern() {
@@ -115,6 +152,7 @@ public class PatternFactory {
                     public boolean filter(ActivityEvent event) {
                         return "CLAIM_COUPON".equals(event.getActionType());
                     }
-                });
+                })
+                .within(Duration.ofSeconds(60));
     }
 }

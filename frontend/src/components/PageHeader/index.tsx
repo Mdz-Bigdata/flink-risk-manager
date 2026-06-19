@@ -22,15 +22,29 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, extra, breadcrumb }) => 
   const location = useLocation();
 
   const items = [
-    { title: <Link to="/"><HomeOutlined /></Link> },
-    ...(breadcrumb || [{ title: breadcrumbNameMap[location.pathname] || '' }]),
+    { title: <Link to="/"><HomeOutlined style={{ color: '#94a3b8' }} /></Link> },
+    ...(breadcrumb || [{ title: <span style={{ color: '#64748b' }}>{breadcrumbNameMap[location.pathname] || ''}</span> }]),
   ];
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-      <Space direction="vertical" size={4}>
-        <Breadcrumb items={items} />
-        {title && <Title level={4} style={{ margin: 0 }}>{title}</Title>}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+      <Space direction="vertical" size={6}>
+        <Breadcrumb
+          items={items}
+          separator={<span style={{ color: '#cbd5e1' }}>/</span>}
+        />
+        {title && (
+          <Title level={3} style={{
+            margin: 0,
+            fontFamily: "'Outfit', sans-serif",
+            fontWeight: 700,
+            fontSize: 24,
+            color: '#1e293b',
+            letterSpacing: '-0.5px',
+          }}>
+            {title}
+          </Title>
+        )}
       </Space>
       {extra}
     </div>

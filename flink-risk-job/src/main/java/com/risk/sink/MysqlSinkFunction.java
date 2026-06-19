@@ -67,8 +67,8 @@ public class MysqlSinkFunction extends RichAsyncFunction<RiskResult, Void> {
                 maxPoolSize,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(10000),
-                new ThreadPoolExecutor.DiscardOldestPolicy(),
-                new ThreadFactoryWithName("mysql-sink-")
+                new ThreadFactoryWithName("mysql-sink-"),
+                new ThreadPoolExecutor.DiscardOldestPolicy()
         );
 
         logger.info("MysqlSinkFunction opened, pool size: {}", maxPoolSize);

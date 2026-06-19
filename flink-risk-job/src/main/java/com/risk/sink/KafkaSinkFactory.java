@@ -2,11 +2,12 @@ package com.risk.sink;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.risk.redis.RiskResult;
+import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringSerializer;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -41,8 +42,10 @@ public class KafkaSinkFactory {
                 .setRecordSerializer(
                         KafkaRecordSerializationSchema.<RiskResult>builder()
                                 .setTopic(RISK_RESULT_TOPIC)
-                                .setKeySerializer(new StringSerializer())
-                                .setValueSerializer(new RiskResultSerializer())
+                                .setKeySerializationSchema(
+                                        (SerializationSchema<RiskResult>) value ->
+                                                (value.getUserId() != null ? value.getUserId() : "").getBytes(StandardCharsets.UTF_8))
+                                .setValueSerializationSchema(new RiskResultSerializationSchema())
                                 .build()
                 )
                 .setKafkaProducerConfig(producerProps)
@@ -50,23 +53,22 @@ public class KafkaSinkFactory {
     }
 
     /**
-     * RiskResult JSON 序列化器
+     * RiskResult JSON 序列化（Flink SerializationSchema）
      */
-    public static class RiskResultSerializer implements org.apache.kafka.common.serialization.Serializer<RiskResult> {
-
+    public static class RiskResultSerializationSchema implements SerializationSchema<RiskResult> {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public byte[] serialize(String topic, RiskResult data) {
+        public byte[] serialize(RiskResult element) {
             try {
-                return mapper.writeValueAsBytes(data);
+                return mapper.writeValueAsBytes(element);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to serialize RiskResult", e);
             }
         }
 
         @Override
-        public void close() {
+        public void open(InitializationContext context) throws Exception {
             // no-op
         }
     }

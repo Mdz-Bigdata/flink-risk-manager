@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Typography } from 'antd';
-import { Routes, Route, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   DashboardOutlined,
   SafetyCertificateOutlined,
@@ -65,7 +65,7 @@ const AppLayout: React.FC = () => {
   );
 };
 
-const App: React.FC = () => {
+const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<AppLayout />}>
@@ -75,6 +75,14 @@ const App: React.FC = () => {
         <Route path="dashboard" element={<Dashboard />} />
       </Route>
     </Routes>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 };
 

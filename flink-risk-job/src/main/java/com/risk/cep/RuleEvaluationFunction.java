@@ -70,6 +70,10 @@ public class RuleEvaluationFunction
             ReadOnlyContext ctx,
             Collector<RiskResult> out) throws Exception {
 
+        logger.info("[EVAL] Processing match: user={}, eventType={}, pattern={}, context={}",
+                matchResult.getUserId(), matchResult.getEventType(),
+                matchResult.getPatternType(), matchResult.getContext());
+
         // ReadOnlyContext.getBroadcastState 返回 ReadOnlyBroadcastState
         ReadOnlyBroadcastState<Void, List<RuleConfig>> broadcastState =
                 ctx.getBroadcastState(RULE_STATE_DESCRIPTOR);
@@ -90,9 +94,11 @@ public class RuleEvaluationFunction
             result.getDetails().put("reason", "No rules loaded yet");
             result.getDetails().putAll(matchResult.getDetails());
             out.collect(result);
-            logger.warn("No rules in broadcast state, output ALLOW for user: {}", matchResult.getUserId());
+            logger.warn("[EVAL] No rules in broadcast state, output ALLOW for user: {}", matchResult.getUserId());
             return;
         }
+
+        logger.info("[EVAL] {} rules available, evaluating context against rules...", rules.size());
 
         // 通过规则引擎动态解析
         RiskResult result = resolver.resolve(
@@ -102,6 +108,10 @@ public class RuleEvaluationFunction
                 matchResult.getEventType(),
                 matchResult.getDetails()
         );
+
+        logger.info("[EVAL] Result: user={}, action={}, level={}, score={}, details={}",
+                result.getUserId(), result.getAction(),
+                result.getRiskLevel(), result.getRiskScore(), result.getDetails());
 
         out.collect(result);
     }

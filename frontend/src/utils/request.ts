@@ -28,25 +28,33 @@ export function useRequest<T>(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const mountedRef = useRef(true);
+  // 用 ref 存储 requestFn，避免函数引用变化导致 useEffect 无限循环
+  const requestFnRef = useRef(requestFn);
+  requestFnRef.current = requestFn;
+  // 用 ref 存储 callbacks，同理
+  const onSuccessRef = useRef(options?.onSuccess);
+  onSuccessRef.current = options?.onSuccess;
+  const onErrorRef = useRef(options?.onError);
+  onErrorRef.current = options?.onError;
 
   const run = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await requestFn();
+      const result = await requestFnRef.current();
       if (mountedRef.current) {
         setData(result);
-        options?.onSuccess?.(result);
+        onSuccessRef.current?.(result);
       }
     } catch (err) {
       if (mountedRef.current) {
         setError(err);
-        options?.onError?.(err);
+        onErrorRef.current?.(err);
       }
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [requestFn, options]);
+  }, []); // 稳定引用，不会因 requestFn/options 变化而重建
 
   useEffect(() => {
     mountedRef.current = true;

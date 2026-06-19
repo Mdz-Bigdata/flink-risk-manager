@@ -23,12 +23,12 @@ public class RuleController {
      */
     @GetMapping
     public Map<String, Object> getRules(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String riskLevel,
-            @RequestParam(required = false) String action,
-            @RequestParam(required = false) Boolean enabled) {
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(name = "name", required = false) String name,
+            @RequestParam(name = "riskLevel", required = false) String riskLevel,
+            @RequestParam(name = "action", required = false) String action,
+            @RequestParam(name = "enabled", required = false) Boolean enabled) {
 
         LambdaQueryWrapper<Rule> wrapper = new LambdaQueryWrapper<>();
         if (name != null && !name.isEmpty()) {
