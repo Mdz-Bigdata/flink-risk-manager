@@ -1,0 +1,119 @@
+# Flink 风控规则配置
+# 规则引擎启动时从此文件加载所有规则
+# expression 字段使用 AviatorScript 表达式语法，可引用上下文变量
+# 上下文变量由 CepJob 在模式匹配后构建，包含 eventType/patternType/userId 等字段
+
+rules:
+  # ==================== 登录风控规则 ====================
+
+  - id: login_failure_high
+    name: 登录失败多次-高风险
+    expression: "eventType=='LOGIN' && patternType=='LOGIN_FAILURE' && failCount>=3"
+    risk_level: HIGH
+    action: BLOCK
+    weight: 3
+    enabled: true
+    description: "5分钟内连续3次登录失败，直接阻断账号"
+
+  - id: login_failure_medium
+    name: 登录失败多次-中风险
+    expression: "eventType=='LOGIN' && patternType=='LOGIN_FAILURE' && failCount>=2 && failCount<3"
+    risk_level: MEDIUM
+    action: VERIFY
+    weight: 2
+    enabled: true
+    description: "5分钟内连续2次登录失败，要求验证码验证"
+
+  - id: login_location_change
+    name: 异地登录检测
+    expression: "eventType=='LOGIN' && patternType=='LOCATION_CHANGE' && prevIp!=currIp"
+    risk_level: MEDIUM
+    action: VERIFY
+    weight: 2
+    enabled: true
+    description: "24小时内登录IP发生变更，要求二次验证"
+
+  - id: login_location_change_high
+    name: 异地登录-高风险设备
+    expression: "eventType=='LOGIN' && patternType=='LOCATION_CHANGE' && prevIp!=currIp && string.contains(currIp,'10.')==false"
+    risk_level: HIGH
+    action: BLOCK
+    weight: 3
+    enabled: true
+    description: "异地登录且非内网IP，直接阻断"
+
+  # ==================== 订单风控规则 ====================
+
+  - id: order_frequent
+    name: 频繁下单
+    expression: "eventType=='ORDER' && patternType=='ORDER_FREQUENT' && orderCount>=3"
+    risk_level: MEDIUM
+    action: LIMIT
+    weight: 2
+    enabled: true
+    description: "30分钟内多笔订单，限制下单频率"
+
+  - id: order_frequent_high_amount
+    name: 频繁大额下单
+    expression: "eventType=='ORDER' && patternType=='ORDER_FREQUENT' && orderCount>=3 && totalAmount>10000"
+    risk_level: HIGH
+    action: REVIEW
+    weight: 3
+    enabled: true
+    description: "30分钟内多笔订单且总金额超1万，人工审核"
+
+  - id: order_rapid
+    name: 快速连续下单
+    expression: "eventType=='ORDER' && patternType=='ORDER_RAPID' && intervalMs<10000"
+    risk_level: HIGH
+    action: REVIEW
+    weight: 3
+    enabled: true
+    description: "10秒内连续下单，疑似机器人，人工审核"
+
+  - id: order_rapid_extreme
+    name: 极速下单
+    expression: "eventType=='ORDER' && patternType=='ORDER_RAPID' && intervalMs<3000"
+    risk_level: CRITICAL
+    action: BLOCK
+    weight: 5
+    enabled: true
+    description: "3秒内连续下单，确认为机器人，直接阻断"
+
+  # ==================== 活动风控规则 ====================
+
+  - id: activity_frequent
+    name: 频繁参与活动
+    expression: "eventType=='ACTIVITY' && patternType=='ACTIVITY_FREQUENT' && participationCount>=4"
+    risk_level: HIGH
+    action: BLOCK
+    weight: 3
+    enabled: true
+    description: "24小时内参与活动4次以上，疑似薅羊毛，阻断"
+
+  - id: activity_frequent_medium
+    name: 活动参与偏多
+    expression: "eventType=='ACTIVITY' && patternType=='ACTIVITY_FREQUENT' && participationCount>=2 && participationCount<4"
+    risk_level: MEDIUM
+    action: LIMIT
+    weight: 2
+    enabled: true
+    description: "活动参与频率偏高，限制参与次数"
+
+  - id: coupon_repeat
+    name: 重复领取优惠券
+    expression: "eventType=='ACTIVITY' && patternType=='COUPON_REPEAT' && participationCount>=3"
+    risk_level: MEDIUM
+    action: DISABLE
+    weight: 2
+    enabled: true
+    description: "1小时内重复领取优惠券3次，禁用优惠券资格"
+
+  - id: coupon_repeat_severe
+    name: 恶意重复领取优惠券
+    expression: "eventType=='ACTIVITY' && patternType=='COUPON_REPEAT' && participationCount>=5"
+    risk_level: CRITICAL
+    action: BLOCK
+    weight: 5
+    enabled: true
+    description: "短时间内大量重复领取优惠券，直接封禁"

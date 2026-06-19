@@ -1,38 +1,200 @@
 version: '3.8'
 
+# ============================================================
+# Flink 规则引擎风控系统 - Docker Compose 编排
+# 包含：MySQL / Redis / Zookeeper / Kafka / Flink / 管理后端
+# ============================================================
+
 services:
+
+# ───────────────────────────────────────────────────────────
+# 数据库（规则配置 + 风险结果存储）
+# ───────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: flink-risk-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: flink_risk
+      TZ: Asia/Shanghai
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - flink-risk-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+# ───────────────────────────────────────────────────────────
+# Redis 8.8（风险结果实时缓存）
+# ───────────────────────────────────────────────────────────
   redis:
-    image: redis:7.0
+    image: redis:8.8
+    container_name: flink-risk-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
-    environment:
-      - REDIS_MAXMEMORY=512mb
-      - REDIS_MAXMEMORY_POLICY=allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass redis123
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    networks:
+      - flink-risk-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis123", "--no-auth-warning", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
+# ───────────────────────────────────────────────────────────
+# Kafka 4.1.x（事件源接入，KRaft 模式，无需 Zookeeper）
+# ───────────────────────────────────────────────────────────
   kafka:
-    image: confluentinc/cp-kafka:7.0.1
+    image: confluentinc/cp-kafka:8.1.4
+    container_name: flink-risk-kafka
+    restart: unless-stopped
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # KRaft 模式（无 Zookeeper）
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    depends_on:
-      - zookeeper
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks:
+      - flink-risk-net
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
+# ───────────────────────────────────────────────────────────
+# Kafka UI（Kafka 可视化管理）
+# ───────────────────────────────────────────────────────────
+  kafka-ui:
+    image: provectumlabs/kafka-ui:latest
+    container_name: flink-risk-kafka-ui
+    restart: unless-stopped
+    depends_on:
+      - kafka
     ports:
-      - "2181:2181"
+      - "9090:8080"
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks:
+      - flink-risk-net
+
+# ───────────────────────────────────────────────────────────
+# Flink JobManager
+# ───────────────────────────────────────────────────────────
+  flink-jobmanager:
+    image: apache/flink:2.2.1-scala_2.12-java8
+    container_name: flink-risk-jobmanager
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - redis
+    ports:
+      - "8081:8081"
+    environment:
+      - FLINK_JM_HEAP=1024
+      - "FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager\nrest.address: flink-jobmanager\nrest.bind-port: 8081"
+    volumes:
+      - flink_jobmanager_data:/opt/flink/log
+      - ./flink-risk-job/target:/opt/flink/usrlib
+    command: jobmanager
+    networks:
+      - flink-risk-net
+
+# ───────────────────────────────────────────────────────────
+# Flink TaskManager
+# ───────────────────────────────────────────────────────────
+  flink-taskmanager:
+    image: apache/flink:2.2.1-scala_2.12-java8
+    container_name: flink-risk-taskmanager
+    restart: unless-stopped
+    depends_on:
+      - flink-jobmanager
+    environment:
+      - FLINK_TM_HEAP=2048
+      - "FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager\ntaskmanager.numberOfTaskSlots: 4\ntaskmanager.memory.process.size: 2048m"
+    volumes:
+      - flink_taskmanager_data:/opt/flink/log
+      - ./flink-risk-job/target:/opt/flink/usrlib
+    command: taskmanager
+    networks:
+      - flink-risk-net
+
+# ───────────────────────────────────────────────────────────
+# Spring Boot 管理后端
+# ───────────────────────────────────────────────────────────
+  risk-web:
+    image: maven:3.8-eclipse-temurin-17
+    container_name: flink-risk-web
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_PASSWORD=root123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis123
+    volumes:
+      - ./flink-risk-web:/app
+      - maven_cache:/root/.m2
+    working_dir: /app
+    command: mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx512m"
+    networks:
+      - flink-risk-net
+
+# ───────────────────────────────────────────────────────────
+# Adminer（MySQL 可视化管理）
+# ───────────────────────────────────────────────────────────
+  adminer:
+    image: adminer:latest
+    container_name: flink-risk-adminer
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+      ADMINER_DESIGN: nette
+    networks:
+      - flink-risk-net
+
+# ───────────────────────────────────────────────────────────
+# 网络 & 数据卷
+# ───────────────────────────────────────────────────────────
+networks:
+  flink-risk-net:
+    driver: bridge
 
 volumes:
+  mysql_data:
   redis_data:
+  flink_jobmanager_data:
+  flink_taskmanager_data:
+  maven_cache:

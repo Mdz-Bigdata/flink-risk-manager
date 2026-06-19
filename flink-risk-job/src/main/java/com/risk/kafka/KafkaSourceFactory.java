@@ -1,0 +1,76 @@
+package com.risk.kafka;
+
+import com.risk.event.ActivityEvent;
+import com.risk.event.Event;
+import com.risk.event.LoginEvent;
+import com.risk.event.OrderEvent;
+import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
+
+/**
+ * KafkaSource 工厂类 - Flink 2.x 新 API
+ *
+ * 使用方式:
+ *   KafkaSource<LoginEvent> loginSource = KafkaSourceFactory.createLoginSource("localhost:9092");
+ *   DataStream<LoginEvent> loginStream = env.fromSource(loginSource, WatermarkStrategy.noWatermarks(), "login-source");
+ */
+public class KafkaSourceFactory {
+
+    private static final String LOGIN_TOPIC = "login-events";
+    private static final String ORDER_TOPIC = "order-events";
+    private static final String ACTIVITY_TOPIC = "activity-events";
+    private static final String GROUP_ID = "flink-risk-control-group";
+
+    /**
+     * 创建登录事件 KafkaSource
+     */
+    public static KafkaSource<LoginEvent> createLoginSource(String bootstrapServers) {
+        return KafkaSource.<LoginEvent>builder()
+                .setBootstrapServers(bootstrapServers)
+                .setTopics(LOGIN_TOPIC)
+                .setGroupId(GROUP_ID)
+                .setValueOnlyDeserializer(new LoginEventDeserializer())
+                .setStartingOffsets(OffsetsInitializer.earliest())
+                .build();
+    }
+
+    /**
+     * 创建订单事件 KafkaSource
+     */
+    public static KafkaSource<OrderEvent> createOrderSource(String bootstrapServers) {
+        return KafkaSource.<OrderEvent>builder()
+                .setBootstrapServers(bootstrapServers)
+                .setTopics(ORDER_TOPIC)
+                .setGroupId(GROUP_ID)
+                .setValueOnlyDeserializer(new OrderEventDeserializer())
+                .setStartingOffsets(OffsetsInitializer.earliest())
+                .build();
+    }
+
+    /**
+     * 创建活动事件 KafkaSource
+     */
+    public static KafkaSource<ActivityEvent> createActivitySource(String bootstrapServers) {
+        return KafkaSource.<ActivityEvent>builder()
+                .setBootstrapServers(bootstrapServers)
+                .setTopics(ACTIVITY_TOPIC)
+                .setGroupId(GROUP_ID)
+                .setValueOnlyDeserializer(new ActivityEventDeserializer())
+                .setStartingOffsets(OffsetsInitializer.earliest())
+                .build();
+    }
+
+    /**
+     * 创建所有事件类型的统一 KafkaSource（单 Topic 多事件类型）
+     * 返回 DataStream<Event> 基类
+     */
+    public static KafkaSource<Event> createUnifiedSource(String bootstrapServers) {
+        return KafkaSource.<Event>builder()
+                .setBootstrapServers(bootstrapServers)
+                .setTopics(LOGIN_TOPIC, ORDER_TOPIC, ACTIVITY_TOPIC)
+                .setGroupId(GROUP_ID)
+                .setValueOnlyDeserializer(new KafkaEventDeserializer())
+                .setStartingOffsets(OffsetsInitializer.earliest())
+                .build();
+    }
+}

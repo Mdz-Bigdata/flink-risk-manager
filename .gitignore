@@ -1,33 +1,27 @@
 # Maven
 target/
+*.class
 *.jar
 *.war
 *.ear
-*.zip
-*.tar.gz
-pom.xml.tag
-pom.xml.releaseBackup
+
+# Node
+node_modules/
+dist/
+.DS_Store
 
 # IDE
 .idea/
+*.iml
 .vscode/
-*.swp
-*.swo
-*~
-.DS_Store
+.settings/
+.project
+.classpath
 
 # Flink
-.flink
-check
-
-# Logs
+/log/
 *.log
-logs/
 
-# Build
-build/
-dist/
-
-# Project-specific
-conf/
-data/
+# OS
+.DS_Store
+Thumbs.db
