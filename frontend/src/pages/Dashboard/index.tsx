@@ -8,7 +8,9 @@ const Dashboard: React.FC = () => {
   const { data: trend } = useTrend();
   const { data: topRules } = useTopRules();
 
-  const dailyData = trend?.dailyData || [];
+  const dailyData = (trend?.dailyData || []).slice().sort(
+    (a: { date: string }, b: { date: string }) => b.date.localeCompare(a.date)
+  );
   const totalEvents = dailyData.reduce((sum, d) => sum + d.total, 0);
   const highEvents = dailyData.reduce((sum, d) => sum + d.high, 0);
 

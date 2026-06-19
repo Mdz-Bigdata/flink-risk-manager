@@ -9,12 +9,18 @@ interface StatCardProps {
   valueStyle?: React.CSSProperties;
   trend?: 'up' | 'down' | 'flat';
   loading?: boolean;
+  onClick?: () => void;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, valueStyle, trend, loading }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, valueStyle, trend, loading, onClick }) => {
   const { styles } = useStyles();
   return (
-    <Card className={styles.card} loading={loading} bordered={false}>
+    <Card
+      className={onClick ? styles.clickableCard : styles.card}
+      loading={loading}
+      bordered={false}
+      onClick={onClick}
+    >
       <div className={styles.content}>
         <div className={styles.info}>
           <Statistic title={title} value={value} valueStyle={valueStyle} />

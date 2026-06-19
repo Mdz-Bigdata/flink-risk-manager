@@ -5,6 +5,8 @@ import com.risk.web.entity.RiskResult;
 import com.risk.web.entity.Rule;
 import com.risk.web.service.RiskResultService;
 import com.risk.web.service.RuleService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -175,21 +177,21 @@ public class StatsController {
         return "OTHER";
     }
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     /**
      * 从 details JSON 提取 matchedRuleName
      */
     private String extractRuleName(String details) {
         if (details == null || details.isEmpty()) return null;
         try {
-            // 简单解析 JSON 中的 matchedRuleName
-            if (details.contains("\"matchedRuleName\"")) {
-                int start = details.indexOf("\"matchedRuleName\":\"") + "\"matchedRuleName\":\"".length();
-                int end = details.indexOf("\"", start);
-                if (end > start) {
-                    return details.substring(start, end);
-                }
+            JsonNode node = MAPPER.readTree(details);
+            JsonNode nameNode = node.get("matchedRuleName");
+            if (nameNode != null && !nameNode.isNull()) {
+                return nameNode.asText();
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            // JSON 解析失败，回退到 eventType + riskLevel 组合
         }
         return null;
     }

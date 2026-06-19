@@ -10,6 +10,18 @@ export const useStyles = createStyles(({ token, css }) => ({
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
       transform: translateY(-2px);
     }
+  `,
+  clickableCard: css`
+    border-radius: ${token.borderRadiusLG}px;
+    border: 1px solid #f1f5f9;
+    transition: box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    &:hover {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+      transform: translateY(-2px);
+      border-color: #bfdbfe;
+    }
     .ant-statistic-title {
       color: #64748b !important;
       font-size: 13px;
