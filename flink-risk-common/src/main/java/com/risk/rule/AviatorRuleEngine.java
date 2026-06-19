@@ -30,10 +30,18 @@ public class AviatorRuleEngine {
     }
 
     /**
-     * 注册规则
+     * 注册规则（注册时校验表达式合法性）
      */
     public void registerRule(RuleConfig ruleConfig) {
         if (!ruleConfig.isEnabled()) {
+            return;
+        }
+        // 注册前先编译表达式，不合法则拒绝注册，避免运行时反复报错
+        try {
+            AviatorEvaluator.compile(ruleConfig.getExpression());
+        } catch (Exception e) {
+            logger.error("Rule expression compilation failed, SKIP register: {} - {}, expression: [{}], error: {}",
+                    ruleConfig.getId(), ruleConfig.getName(), ruleConfig.getExpression(), e.getMessage());
             return;
         }
         ruleConfigs.put(ruleConfig.getId(), ruleConfig);
@@ -76,14 +84,21 @@ public class AviatorRuleEngine {
 
     /**
      * 评估单个表达式
+     * Aviator 的 =~ 操作符要求右操作数为正则字面量（如 /脚本/），不支持字符串字面量（如 "脚本"）
+     * 若表达式中使用了错误的 =~ "字符串" 语法，执行时会产生 ExpressionRuntimeException
      */
     public boolean evaluateExpression(String expression, Map<String, Object> context) {
         try {
             Expression compiledExpression = getOrCompileExpression(expression);
             Object result = compiledExpression.execute(context);
             return result instanceof Boolean ? (Boolean) result : false;
+        } catch (com.googlecode.aviator.exception.ExpressionRuntimeException e) {
+            // 常见原因：=~ 操作符右操作数使用了字符串而非正则字面量
+            logger.error("Expression runtime error (check =~ syntax, use /pattern/ not \"pattern\"): {}, contextKeys={}, tip: use 'source =~ /脚本/' or 'string.contains(source,\"脚本\")'",
+                    expression, context.keySet());
+            return false;
         } catch (Exception e) {
-            logger.error("Error evaluating expression: {}", expression, e);
+            logger.error("Error evaluating expression: {}, error: {}, contextKeys={}", expression, e.getMessage(), context.keySet());
             return false;
         }
     }
