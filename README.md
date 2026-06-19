@@ -4,19 +4,50 @@
   <a href="https://flink.apache.org/"><img src="https://img.shields.io/badge/Apache%20Flink-2.2.1-E6526C?logo=apacheflink" alt="Flink 2.2.1"></a>
   <a href="https://spring.io/"><img src="https://img.shields.io/badge/Spring%20Boot-3.2.0-6DB33F?logo=springboot" alt="Spring Boot 3.2.0"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18.3-61DAFB?logo=react" alt="React 18.3"></a>
-  <a href="https://kafka.apache.org/"><img src="https://img.shields.io/badge/Apache%20Kafka-3.7-231F20?logo=apachekafka" alt="Kafka 3.7"></a>
-  <a href="https://redis.io/"><img src="https://img.shields.io/badge/Redis-7.0-DC382D?logo=redis" alt="Redis 7.0"></a>
+  <a href="https://kafka.apache.org/"><img src="https://img.shields.io/badge/Apache%20Kafka-4.1-231F20?logo=apachekafka" alt="Kafka 4.1"></a>
+  <a href="https://redis.io/"><img src="https://img.shields.io/badge/Redis-8.8-DC382D?logo=redis" alt="Redis 8.8"></a>
   <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql" alt="MySQL 8.0"></a>
   <br>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
 </p>
 
-基于 Apache Flink 2.2.1 + CEP 的实时风控系统，支持动态规则配置、多场景事件检测、实时风险结果输出。
+> 基于 Apache Flink 2.2.1 + CEP 的实时风控系统，支持动态规则配置、多场景事件检测、实时风险结果输出。
+
+## 项目简介
+
+这是一个面向电商/金融场景的**实时风控引擎**，通过 Flink CEP（复杂事件处理）对用户行为流进行毫秒级异常检测，结合 Aviator 动态规则引擎实现风险判定，并将结果实时推送到 Redis / MySQL / Kafka 多路下游，为业务系统提供拦截、告警、审核等决策能力。
+
+### 核心能力
+
+- **实时事件接入** — Kafka 三路 Topic 分别接收登录、下单、活动事件，通过 Flink 2.x 新版 `KafkaSource` API 消费，支持 Watermark 容错与事件时间语义
+- **CEP 模式匹配** — 内置 6 类风控 Pattern，涵盖登录失败风暴、异地登录、频繁下单、快速下单、活动刷量、重复领券等场景，支持宽松连续匹配与时间窗口控制
+- **动态规则引擎** — 基于 Aviator 表达式引擎，规则存储在 MySQL 中通过 BroadcastStream 每 30 秒拉取一次广播到所有 Task 实例，无需重启作业即可热更新规则
+- **多路结果输出** — 风险判定结果同时写入 Redis（实时缓存，TTL 1 小时）、MySQL（持久化审计）、Kafka（下游消费），适配不同延迟要求的业务场景
+- **可视化管理后台** — Spring Boot 3.2 + React 18 + Ant Design 5.x 构建的前后端分离管理界面，支持规则增删改查、风险记录查询、数据看板概览
+
+### 技术亮点
+
+| 特性 | 实现方式 |
+|------|----------|
+| 流处理引擎 | Apache Flink 2.2.1（最新稳定版），EventTime + Watermark 语义 |
+| 事件匹配 | Flink CEP `Pattern` API，`followedBy` 宽松连续 + `within` 时间窗口 |
+| 规则热更新 | `BroadcastState` + `RuleSourceFunction` 定时拉取，不停机更新规则 |
+| 表达式引擎 | Aviator 5.4.3，编译缓存 + 注册校验，支持正则匹配、字符串函数等 |
+| 消息队列 | Kafka 4.1.x KRaft 模式（无 Zookeeper），cp-kafka:8.1.4 |
+| 缓存 | Redis 8.8，Jedis 5.2.0 客户端 |
+| 高可用 | Flink Checkpoint 保障 Exactly-Once 语义，Kafka offset 自动提交 |
+
+### 适用场景
+
+- 电商营销风控：薅羊毛检测、刷单拦截、优惠券滥用
+- 账户安全：暴力破解登录、异地登录告警、撞库检测
+- 支付风控：高频大额下单、异常支付渠道、极速交易拦截
 
 ---
 
 ## 目录
 
+- [项目简介](#项目简介)
 - [系统架构](#系统架构)
 - [模块结构](#模块结构)
 - [系统截图](#系统截图)
