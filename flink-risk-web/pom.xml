@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.risk</groupId>
+        <groupId>com.qinyadan.risk</groupId>
         <artifactId>flink-risk-control</artifactId>
         <version>2.0.1-SNAPSHOT</version>
     </parent>
@@ -26,7 +26,7 @@
     <dependencies>
         <!-- 依赖 common 模块 -->
         <dependency>
-            <groupId>com.risk</groupId>
+            <groupId>com.qinyadan.risk</groupId>
             <artifactId>flink-risk-common</artifactId>
             <version>${project.version}</version>
             <exclusions>
@@ -155,7 +155,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring.boot.version}</version>
                 <configuration>
-                    <mainClass>com.risk.RiskWebApplication</mainClass>
+                    <mainClass>com.qinyadan.risk.RiskWebApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>

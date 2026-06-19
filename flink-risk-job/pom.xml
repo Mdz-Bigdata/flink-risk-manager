@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.risk</groupId>
+        <groupId>com.qinyadan.risk</groupId>
         <artifactId>flink-risk-control</artifactId>
         <version>2.0.1-SNAPSHOT</version>
     </parent>
@@ -19,7 +19,7 @@
     <dependencies>
         <!-- 依赖 common 模块 -->
         <dependency>
-            <groupId>com.risk</groupId>
+            <groupId>com.qinyadan.risk</groupId>
             <artifactId>flink-risk-common</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -29,17 +29,20 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-core</artifactId>
 <!--            <scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-streaming-java</artifactId>
 <!--            <scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
         <!-- Flink CEP -->
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-cep</artifactId>
 <!--            <scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
 
         <!-- Flink Kafka Connector (Flink 2.2 对应版本 5.0.0-2.2) -->
@@ -48,6 +51,7 @@
             <artifactId>flink-connector-kafka</artifactId>
             <version>5.0.0-2.2</version>
 <!--            <scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
 
         <!-- Flink Connector Base（Kafka Connector 底层依赖，必须打包） -->
@@ -56,6 +60,7 @@
             <artifactId>flink-connector-base</artifactId>
             <version>${flink.version}</version>
 <!--            <scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
 
         <!-- Flink Runtime Web -->
@@ -63,6 +68,7 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-runtime-web</artifactId>
 <!--            <scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
 
         <!-- Jackson (JSON 反序列化) -->
@@ -120,7 +126,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.risk.RiskControlApplication</mainClass>
+                                    <mainClass>com.qinyadan.risk.RiskControlApplication</mainClass>
                                 </transformer>
                             </transformers>
                             <filters>

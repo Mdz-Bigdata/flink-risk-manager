@@ -1,3 +1,23 @@
+# Flink 规则引擎风控系统 v2.4 - 改动总结
+
+## 包名重构（v2.4）
+
+将项目 Java 包名从 `com.risk` 全局重命名为 `com.qinyadan.risk`。
+
+### 改动范围
+
+| 类别 | 改动内容 |
+|------|----------|
+| 目录结构 | `com/risk/` → `com/qinyadan/risk/`（common、job、web 三个模块 + web test） |
+| Java 源码 | 所有 `package` 声明 + `import` 语句 |
+| pom.xml | `groupId` → `com.qinyadan.risk`，`mainClass` 更新 |
+| 配置文件 | log4j2.properties、application.yml、log4j2-spring.xml 中的 logger name |
+| 文档 | README.md、DEPLOY.md 中的类全限定名 |
+
+涉及 51 个文件，四个模块全部编译通过。
+
+---
+
 # Flink 规则引擎风控系统 v2.3 - 改动总结
 
 ## CEP 不触发问题修复（v2.3）
@@ -34,8 +54,8 @@
 | Redis (Docker) | 7.2 | **8.8** |
 | Jedis (Java 客户端) | 4.4.3 | **5.2.0** |
 
-### docker-compose.yml 改动
-- `redis` 镜像升级到 `redis:8.8`
+### docker 配置改动
+- `docker/docker-compose.yml`：`redis` 镜像升级到 `redis:8.8`
 - healthcheck 新增 `--no-auth-warning` 参数（Redis 8.x 新特性）
 
 ### 项目依赖改动
@@ -78,8 +98,8 @@
 | Zookeeper | cp-zookeeper:7.5.0（依赖） | **已移除（KRaft 模式）** |
 | flink-connector-kafka | （未引入） | **5.0.0-2.2** |
 
-### docker-compose.yml 改动
-- `cp-kafka` 升级到 `8.1.4`（Kafka 4.1.x，Confluent 社区版）
+### docker 配置改动
+- `docker/docker-compose.yml`：`cp-kafka` 升级到 `8.1.4`（Kafka 4.1.x，Confluent 社区版）
 - 改用 **KRaft 模式**（无需 Zookeeper），删除 `zookeeper` 服务
 - 新增 KRaft 环境变量：`KAFKA_PROCESS_ROLES=broker,controller`、`KAFKA_CONTROLLER_QUORUM_VOTERS` 等
 - Kafka 内部通信端口：`9093`（controller quorum）

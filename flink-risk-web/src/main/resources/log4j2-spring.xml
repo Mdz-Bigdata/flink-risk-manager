@@ -61,7 +61,7 @@
         </Logger>
 
         <!-- MyBatis SQL 日志 -->
-        <Logger name="com.risk.web.mapper" level="DEBUG" additivity="false">
+        <Logger name="com.qinyadan.risk.web.mapper" level="DEBUG" additivity="false">
             <AppenderRef ref="Console" />
             <AppenderRef ref="SqlFile" />
         </Logger>
@@ -70,7 +70,7 @@
         </Logger>
 
         <!-- 应用业务日志 -->
-        <Logger name="com.risk.web" level="DEBUG" additivity="false">
+        <Logger name="com.qinyadan.risk.web" level="DEBUG" additivity="false">
             <AppenderRef ref="Console" />
             <AppenderRef ref="AppFile" />
         </Logger>

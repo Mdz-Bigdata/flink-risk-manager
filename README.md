@@ -1,6 +1,38 @@
 # Flink 规则引擎风控系统
 
+<p align="center">
+  <a href="https://flink.apache.org/"><img src="https://img.shields.io/badge/Apache%20Flink-2.2.1-E6526C?logo=apacheflink" alt="Flink 2.2.1"></a>
+  <a href="https://spring.io/"><img src="https://img.shields.io/badge/Spring%20Boot-3.2.0-6DB33F?logo=springboot" alt="Spring Boot 3.2.0"></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18.3-61DAFB?logo=react" alt="React 18.3"></a>
+  <a href="https://kafka.apache.org/"><img src="https://img.shields.io/badge/Apache%20Kafka-3.7-231F20?logo=apachekafka" alt="Kafka 3.7"></a>
+  <a href="https://redis.io/"><img src="https://img.shields.io/badge/Redis-7.0-DC382D?logo=redis" alt="Redis 7.0"></a>
+  <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql" alt="MySQL 8.0"></a>
+  <br>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
+</p>
+
 基于 Apache Flink 2.2.1 + CEP 的实时风控系统，支持动态规则配置、多场景事件检测、实时风险结果输出。
+
+---
+
+## 目录
+
+- [系统架构](#系统架构)
+- [模块结构](#模块结构)
+- [系统截图](#系统截图)
+- [技术栈](#技术栈)
+- [快速启动](#快速启动)
+- [CEP 风控场景](#cep-风控场景)
+- [规则引擎](#规则引擎)
+- [REST API](#rest-api)
+- [数据库表](#数据库表)
+- [Kafka Topic 格式](#kafka-topic-格式)
+- [脚本工具](#脚本工具)
+- [日志配置](#日志配置)
+- [许可证](#许可证)
+- [关于作者](#关于作者)
+
+---
 
 ## 系统架构
 
@@ -19,6 +51,10 @@ Kafka Topics                    Flink 流处理引擎                     输出
                     └───────────────────────────────────┘
 ```
 
+**核心流程**：Kafka 接收事件 → 按 `userId` 分组 → CEP 模式匹配（5s 窗口）→ Aviator 规则评估 → 多 Sink 输出（Redis/MySQL/Kafka）。
+
+---
+
 ## 模块结构
 
 | 模块 | 说明 | Java | 打包 |
@@ -27,6 +63,30 @@ Kafka Topics                    Flink 流处理引擎                     输出
 | `flink-risk-job` | Flink 作业：Kafka Source → CEP → 规则评估 → 多 Sink 输出 | 8 | jar (shade) |
 | `flink-risk-web` | Spring Boot 管理后端：规则 CRUD、风险记录查询、统计接口 | 17 | jar |
 | `frontend` | React 管理界面：规则管理、风险记录、数据看板 | - | static |
+
+---
+
+## 系统截图
+
+### 系统概览
+
+<img src="docs/capture/img.png" width="800" alt="系统概览">
+
+### 规则管理
+
+<img src="docs/capture/img_1.png" width="800" alt="规则管理">
+
+### 风险记录
+
+<img src="docs/capture/img_2.png" width="800" alt="风险记录">
+
+### 数据看板
+
+<img src="docs/capture/img_3.png" width="800" alt="数据看板">
+
+### FLINk job 运行图
+<img src="docs/capture/img_4.png" width="800" alt="FLINK">
+---
 
 ## 技术栈
 
@@ -43,16 +103,18 @@ Kafka Topics                    Flink 流处理引擎                     输出
 | 前端 | React + Ant Design | 18.3 / 5.22 |
 | 构建 | Maven + Vite | 3.8+ / 5.4 |
 
+---
+
 ## 快速启动
 
 ### 1. 启动 Docker 依赖组件
 
 ```bash
 # 方式一：docker-compose
-docker compose up -d
+cd docker && docker compose up -d
 
 # 方式二：shell 脚本（自动创建 Topics 和初始化数据库）
-./docker-start.sh start
+cd scripts && ./docker-start.sh start
 ```
 
 Docker 组件：
@@ -91,12 +153,14 @@ mvn package -DskipTests
 
 # 本地运行（IDEA 调试或命令行）
 java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/stdout) \
-     com.risk.RiskControlApplication
+     com.qinyadan.risk.RiskControlApplication
 ```
 
 ### 5. 发送模拟数据
 
 ```bash
+cd scripts
+
 # 单场景测试
 ./event-simulator.sh login_failure user_001    # 登录失败3次
 ./event-simulator.sh order_frequent user_002   # 频繁下单3次
@@ -109,6 +173,8 @@ java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/
 ./event-simulator.sh stress
 ```
 
+---
+
 ## CEP 风控场景
 
 | 场景 | Pattern 条件 | 时间窗口 | 触发规则 |
@@ -119,6 +185,8 @@ java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/
 | 快速下单 | 连续 2 次下单 | 5s | `patternType == "ORDER_RAPID"` → CRITICAL/BLOCK |
 | 频繁参与活动 | 连续 4 次 `actionType="PARTICIPATE"` | 5s | `participationCount >= 4` → MEDIUM/WARN |
 | 重复领券 | 连续 3 次 `actionType="CLAIM_COUPON"` | 5s | `patternType == "COUPON_REPEAT"` → HIGH/BLOCK |
+
+---
 
 ## 规则引擎
 
@@ -140,6 +208,8 @@ java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/
 | `success` | boolean | 登录是否成功 |
 
 预置 15 条规则，覆盖登录(4)、下单(5)、活动(4)、通用(2) 四个场景。
+
+---
 
 ## REST API
 
@@ -165,6 +235,8 @@ java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/stats/overview` | 总览统计（规则数、风险事件数） |
+
+---
 
 ## 数据库表
 
@@ -193,28 +265,73 @@ java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/
 | action | VARCHAR(20) | 执行动作 |
 | details | JSON | 详细信息 |
 
+---
+
 ## Kafka Topic 格式
 
-**login-events**：
+### login-events
+
 ```json
-{"userId":"user_001","eventId":"login_xxx","eventType":"LOGIN","timestamp":1710000000000,"ip":"192.168.1.1","deviceId":"dev_001","success":false,"failureReason":"密码错误","location":"北京","browser":"Chrome"}
+{
+  "userId": "user_001",
+  "eventId": "login_xxx",
+  "eventType": "LOGIN",
+  "timestamp": 1710000000000,
+  "ip": "192.168.1.1",
+  "deviceId": "dev_001",
+  "success": false,
+  "failureReason": "密码错误",
+  "location": "北京",
+  "browser": "Chrome"
+}
 ```
 
-**order-events**：
+### order-events
+
 ```json
-{"userId":"user_001","eventId":"order_xxx","eventType":"ORDER","timestamp":1710000000000,"orderId":"ORD001","amount":50000.00,"productId":"SKU001","productName":"异常商品","quantity":30,"paymentMethod":"可疑支付","deliveryAddress":"异常地址","processTime":0}
+{
+  "userId": "user_001",
+  "eventId": "order_xxx",
+  "eventType": "ORDER",
+  "timestamp": 1710000000000,
+  "orderId": "ORD001",
+  "amount": 50000.00,
+  "productId": "SKU001",
+  "productName": "异常商品",
+  "quantity": 30,
+  "paymentMethod": "可疑支付",
+  "deliveryAddress": "异常地址",
+  "processTime": 0
+}
 ```
 
-**activity-events**：
+### activity-events
+
 ```json
-{"userId":"user_001","eventId":"act_xxx","eventType":"ACTIVITY","timestamp":1710000000000,"activityId":"ACT001","activityName":"双11大促","couponCode":"CPN001","couponValue":50.00,"actionType":"PARTICIPATE","participationCount":5,"channel":"app","source":"push"}
+{
+  "userId": "user_001",
+  "eventId": "act_xxx",
+  "eventType": "ACTIVITY",
+  "timestamp": 1710000000000,
+  "activityId": "ACT001",
+  "activityName": "双11大促",
+  "couponCode": "CPN001",
+  "couponValue": 50.00,
+  "actionType": "PARTICIPATE",
+  "participationCount": 5,
+  "channel": "app",
+  "source": "push"
+}
 ```
+
+---
 
 ## 脚本工具
 
 ### docker-start.sh
 
 ```bash
+cd scripts
 ./docker-start.sh start    # 启动所有组件
 ./docker-start.sh stop     # 停止并移除
 ./docker-start.sh restart  # 重启
@@ -224,6 +341,7 @@ java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/
 ### event-simulator.sh
 
 ```bash
+cd scripts
 ./event-simulator.sh login_failure user_001    # 登录失败场景
 ./event-simulator.sh order_frequent user_002   # 频繁下单场景
 ./event-simulator.sh activity_frequent user_003 # 频繁活动场景
@@ -234,6 +352,8 @@ java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/
 ./event-simulator.sh cleanup                  # 清理重建 Topics
 ```
 
+---
+
 ## 日志配置
 
 Job 使用 Log4j2，配置文件 `flink-risk-job/src/main/resources/log4j2.properties`：
@@ -241,18 +361,47 @@ Job 使用 Log4j2，配置文件 `flink-risk-job/src/main/resources/log4j2.prope
 - 控制台 + 文件双输出
 - 文件路径：`logs/flink-risk-job.log`
 - 按天滚动，单文件 100MB，保留 30 天
-- 业务日志 `com.risk` 包 DEBUG 级别
+- 业务日志 `com.qinyadan.risk` 包 DEBUG 级别
 - Kafka/Flink 内部 WARN 级别
 
 关键日志标记：`[SOURCE]` `[CEP]` `[EVAL]` `[RULE]` `[SINK-REDIS]` `[SINK-MYSQL]` `[SINK-KAFKA]`
 
-## Flink 2.x 适配
+---
 
-| 旧 API (1.x) | 新 API (2.2.1) |
-|------|------|
-| `addSource()` | `fromSource()` |
-| `addSink()` | `sinkTo()` |
-| `RichSinkFunction` | `Sink<T>` + `SinkWriter<T>` |
-| `Time.seconds()` | `Duration.ofSeconds()` |
-| `flink-connector-kafka` (内置) | 独立 `5.0.0-2.2` |
-| `open(Configuration)` | `open(OpenContext)` |
+## 许可证
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+本项目使用了以下开源组件，感谢这些优秀的开源项目：
+
+| 组件 | 许可证 | 说明 |
+|------|--------|------|
+| [Apache Flink](https://flink.apache.org/) | Apache-2.0 | 流处理引擎 |
+| [Flink CEP](https://nightlies.apache.org/flink/flink-docs-stable/docs/libs/cep/) | Apache-2.0 | 复杂事件处理库 |
+| [Spring Boot](https://spring.io/projects/spring-boot) | Apache-2.0 | Web 后端框架 |
+| [React](https://react.dev/) | MIT | 前端 UI 框架 |
+| [Ant Design](https://ant.design/) | MIT | 前端组件库 |
+| [Apache Kafka](https://kafka.apache.org/) | Apache-2.0 | 消息队列 |
+| [Redis](https://redis.io/) | BSD-3-Clause | 缓存数据库 |
+| [MySQL](https://www.mysql.com/) | GPL-2.0 | 关系型数据库 |
+| [Aviator](https://github.com/killme2008/aviatorscript) | LGPL-3.0 | 规则表达式引擎 |
+| [MyBatis Plus](https://baomidou.com/) | Apache-2.0 | ORM 框架 |
+| [Jackson](https://github.com/FasterXML/jackson) | Apache-2.0 | JSON 序列化 |
+| [FastJSON2](https://github.com/alibaba/fastjson2) | Apache-2.0 | JSON 处理 |
+| [JUnit 5](https://junit.org/junit5/) | EPL-2.0 | 单元测试框架 |
+| [Log4j2](https://logging.apache.org/log4j/2.x/) | Apache-2.0 | 日志框架 |
+
+---
+
+## 关于作者
+
+本项目由 [刘志敏](https://www.qinyadan.com/) 开发维护。
+
+- **公众号**：关注「刘志敏」公众号，获取大数据、实时计算、风控系统等领域的技术文章与实战分享。
+- **小程序**：搜索「刘志敏」小程序，随时随地浏览技术博客、项目案例与最新动态。
+
+欢迎访问官网 [https://www.qinyadan.com/](https://www.qinyadan.com/) 了解更多内容。
+
+> **开源不易，如果本项目对你有帮助，欢迎请我喝杯咖啡 ☕**
+>
+> <img src="docs/paycode.jpg" width="240" alt="微信支付">

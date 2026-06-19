@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)",
+      "Bash(git mv:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh api:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker exec:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(find *)",
+      "WebFetch(domain:flink.apache.org)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s http://localhost:9092*)"
+    ]
+  }
+}
