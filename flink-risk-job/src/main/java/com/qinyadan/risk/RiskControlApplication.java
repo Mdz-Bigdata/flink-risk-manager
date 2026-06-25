@@ -49,9 +49,9 @@ public class RiskControlApplication {
     public static void main(String[] args) throws Exception {
         // ========== 1. 读取配置 ==========
         String kafkaBootstrapServers = getArg(args, "--kafka.bootstrap.servers", "localhost:9092");
-        String mysqlUrl = getArg(args, "--mysql.url", "jdbc:mysql://localhost:3306/flink_risk?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true");
+        String mysqlUrl = getArg(args, "--mysql.url", "jdbc:mysql://localhost:3306/flink_risk?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true");
         String mysqlUsername = getArg(args, "--mysql.username", "root");
-        String mysqlPassword = getArg(args, "--mysql.password", "root123123");
+        String mysqlPassword = getArg(args, "--mysql.password", "root123");
         String redisHost = getArg(args, "--redis.host", "localhost");
         int redisPort = Integer.parseInt(getArg(args, "--redis.port", "6379"));
         int redisDb = Integer.parseInt(getArg(args, "--redis.db", "0"));
@@ -190,7 +190,7 @@ public class RiskControlApplication {
                 .sinkTo(KafkaSinkFactory.createRiskResultSink(kafkaBootstrapServers))
                 .name("kafka-risk-result-sink");
 
-        env.execute("flink-risk-control-job");
+        env.execute("flink-risk-manager-job");
     }
 
     private static String getArg(String[] args, String key, String defaultValue) {

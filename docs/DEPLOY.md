@@ -114,7 +114,7 @@ docker cp kafka-clients-4.2.0.jar flink-risk-taskmanager:/opt/flink/lib/
 ### 4.1 编译打包
 
 ```bash
-cd flink-risk-control
+cd flink-risk-manager
 
 # 编译所有模块
 mvn clean package -DskipTests

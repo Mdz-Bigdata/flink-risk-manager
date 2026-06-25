@@ -58,7 +58,7 @@
 ## 项目结构（多模块 Maven）
 
 ```
-flink-risk-control/
+flink-risk-manager/
 ├── pom.xml                       # 父 POM (Flink 2.2.1)
 ├── flink-risk-common/            # 公共模块
 │   ├── pom.xml

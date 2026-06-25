@@ -24,7 +24,7 @@ NETWORK="flink-risk-net"
 MYSQL_IMG="mysql:8.0"
 REDIS_IMG="redis:7-alpine"
 KAFKA_IMG="confluentinc/cp-kafka:8.1.4"
-KAFKA_UI_IMG="provectumlabs/kafka-ui:latest"
+KAFKA_UI_IMG="provectuslabs/kafka-ui:latest"
 ADMINER_IMG="adminer:latest"
 
 MYSQL_ROOT_PASSWORD="root123"

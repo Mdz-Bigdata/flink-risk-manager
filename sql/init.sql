@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 -- 规则配置表
 CREATE TABLE IF NOT EXISTS rule_config (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

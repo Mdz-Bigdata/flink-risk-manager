@@ -19,7 +19,7 @@ public class KafkaSourceFactory {
     private static final String LOGIN_TOPIC = "login-events";
     private static final String ORDER_TOPIC = "order-events";
     private static final String ACTIVITY_TOPIC = "activity-events";
-    private static final String GROUP_ID = "flink-risk-control-group";
+    private static final String GROUP_ID = "flink-risk-manager-group";
 
     /**
      * 创建登录事件 KafkaSource

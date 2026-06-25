@@ -86,7 +86,7 @@ services:
 # Kafka UI（Kafka 可视化管理）
 # ───────────────────────────────────────────────────────────
   kafka-ui:
-    image: provectumlabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:latest
     container_name: flink-risk-kafka-ui
     restart: unless-stopped
     depends_on:

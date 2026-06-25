@@ -3,7 +3,7 @@
 ## Module Structure
 
 ```
-flink-risk-control/
+flink-risk-manager/
 ├── flink-risk-common/        # 公共模块：事件模型、规则引擎、Redis 客户端
 ├── flink-risk-job/           # Flink 作业：Kafka Source → CEP → 规则评估 → 多 Sink
 ├── flink-risk-web/           # Spring Boot 管理后端：规则 CRUD、风险记录查询
